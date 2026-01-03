@@ -1,0 +1,94 @@
+import matplotlib.pyplot as plt
+import scipy.integrate as spi
+import random
+import numpy as np
+
+# 1. Визначення функції, яку інтегруємо
+def f(x):
+    return x ** 2
+
+# 2. Межі інтегрування
+a = 0  # Нижня межа
+b = 2  # Верхня межа
+
+# 3. Метод Монте-Карло
+def monte_carlo_integration(func, a, b, num_points):
+    # Визначаємо межі прямокутника, в який "кидаємо точки"
+    # Ширина = (b - a)
+    # Висота має бути не меншою за макс. значення функції на інтервалі.
+    # f(2) = 2^2 = 4. Тому беремо y_max = 4 (або трохи більше для надійності)
+    y_max = func(b) 
+    
+    under_curve = 0 # Лічильник точок під кривою
+
+    # Списки для малювання точок (візуалізація)
+    x_points_under = []
+    y_points_under = []
+    x_points_above = []
+    y_points_above = []
+
+    for _ in range(num_points):
+        # Генеруємо випадкову точку (x, y) всередині прямокутника
+        rand_x = random.uniform(a, b)
+        rand_y = random.uniform(0, y_max)
+
+        # Перевіряємо, чи точка під кривою
+        if rand_y <= func(rand_x):
+            under_curve += 1
+            # Зберігаємо для графіку (зелені точки)
+            x_points_under.append(rand_x)
+            y_points_under.append(rand_y)
+        else:
+            # Зберігаємо для графіку (червоні точки)
+            x_points_above.append(rand_x)
+            y_points_above.append(rand_y)
+
+    # Обчислюємо площу
+    # Відношення точок під кривою до всіх точок = відношення площі інтеграла до площі прямокутника
+    rectangle_area = (b - a) * y_max
+    integral_area = (under_curve / num_points) * rectangle_area
+
+    return integral_area, x_points_under, y_points_under, x_points_above, y_points_above
+
+# --- ЗАПУСК ---
+
+# Кількість експериментів (чим більше, тим точніше)
+N = 15000 
+
+# Обчислюємо методом Монте-Карло
+mc_result, x_under, y_under, x_above, y_above = monte_carlo_integration(f, a, b, N)
+
+# Перевіряємо аналітично (функція quad)
+analytical_result, error = spi.quad(f, a, b)
+
+# Виводимо результати в консоль
+print(f"Кількість точок: {N}")
+print(f"Інтеграл (Монте-Карло): {mc_result}")
+print(f"Інтеграл (Аналітичний/SciPy): {analytical_result}")
+print(f"Абсолютна помилка: {abs(mc_result - analytical_result)}")
+
+# --- ВІЗУАЛІЗАЦІЯ (Бонус) ---
+# Малюємо функцію
+x = np.linspace(-0.5, 2.5, 400)
+y = f(x)
+fig, ax = plt.subplots()
+ax.plot(x, y, 'r', linewidth=2, label='f(x)=x^2')
+
+# Малюємо випадкові точки (обмежуємо кількість на графіку, щоб не зависло, якщо N дуже велике)
+display_limit = 2000 
+ax.scatter(x_above[:display_limit], y_above[:display_limit], color='red', s=1, alpha=0.3, label='Above')
+ax.scatter(x_under[:display_limit], y_under[:display_limit], color='green', s=1, alpha=0.3, label='Under')
+
+# Налаштування
+ax.set_xlim([x[0], x[-1]])
+ax.set_ylim([0, max(y) + 0.1])
+ax.set_xlabel('x')
+ax.set_ylabel('f(x)')
+ax.axvline(x=a, color='gray', linestyle='--')
+ax.axvline(x=b, color='gray', linestyle='--')
+ax.set_title(f'Монте-Карло інтегрування (N={N})')
+plt.legend()
+plt.grid()
+plt.show()
+
+
